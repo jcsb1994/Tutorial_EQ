@@ -166,7 +166,21 @@ bool Tutorial_EQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* Tutorial_EQAudioProcessor::createEditor()
 {
-    return new Tutorial_EQAudioProcessorEditor (*this);
+    // return new Tutorial_EQAudioProcessorEditor (*this);
+
+
+    /* Line below for showing parameters at start of project!
+
+    The custom editor Tutorial_EQAudioProcessorEditor would need to handle the layout
+    and display of parameters manually by adding sliders, buttons, or other controls tha
+    are connected to your parameters.
+    If you don't implement the code for the layout and parameter bindings in your custom editor,
+    nothing will be displayed for the user.
+    
+    generic editor provided by JUCE that automatically handles the creation of GUI components
+    for audio processor parameters. This class can display all the parameters you define
+    in your createParamLayout() function, without needing to manually set up custom controls. */
+    return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -189,3 +203,71 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new Tutorial_EQAudioProcessor();
 }
+
+/* static */ juce::AudioProcessorValueTreeState::ParameterLayout Tutorial_EQAudioProcessor::createParamLayout()
+{
+    const float earMinFreq = 20.f;
+    const float earMaxFreq = 20000.f;
+
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    // We want unique pointers for parameters
+    // make_unique uses new implicitly and initializes a std::unique_ptr (dynamic)
+
+    //======================
+
+    // TODO: Change the 3 freq params for less redundance
+    // Helper function to create an AudioParameterFloat
+    /* auto makeParam = [earMinFreq, earMaxFreq](const juce::String& paramID, const juce::String& paramName, float defaultValue) {
+        return std::make_unique<juce::AudioParameterFloat>(
+            paramID, paramName,
+            juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, 1.f),
+            defaultValue);
+    };
+    layout.add(makeParam("LowCut Freq", "LowCut Freq", earMinFreq));
+    layout.add(makeParam("HighCut Freq", "HighCut Freq", earMaxFreq));
+    layout.add(makeParam("Peak Freq", "Peak Freq", 750.f));
+    */
+
+    // layout.add(std::make_unique<juce::AudioParameterFloat(const String &paramID,
+    //     const String &paramName, NormalisableRange<float) normRng, float dflt);
+    // Le range est de 20 - 20kHz (human ear)
+    // juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, ValueType skewFactor)
+    // -> Skewfactor permet de setup logaritmiquement. Ici, 1 est aucun skew
+    // float dflt -> Set to 20 cuz we dont want to low cut by default
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "LowCut Freq", "LowCut Freq",
+        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, 1.f), earMinFreq));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "HighCut Freq", "HighCut Freq",
+        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, 1.f), earMaxFreq));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Peak Freq", "Peak Freq",
+        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, 1.f), 750.f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Peak Gain", "Peak Gain",
+        juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f), 0.0f));
+    
+    // Quality refers to Q (a large Q will make a narrow notch filter)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Peak Quality", "Peak Quality",
+        juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f), 1.f));
+    
+    // To set the HC / LC filter steepness, we use predetermined options (choices)
+    juce::StringArray strs;
+    for (int i = 1; i <= 4; i++) {
+        juce::String str;
+        str << i*12 << "dB/Oct";
+        strs.add(str);
+    }
+    layout.add(std::make_unique<juce::AudioParameterChoice>("LowCut Slope", "LowCut Slope",
+        strs, 0)); // Defaults to idx 0
+    layout.add(std::make_unique<juce::AudioParameterChoice>("HighCut Slope", "HighCut Slope",
+        strs, 0)); // Defaults to idx 0
+
+    return layout;
+}
+    

@@ -21,6 +21,8 @@ public:
     ~Tutorial_EQAudioProcessor() override;
 
     //==============================================================================
+    
+    /*! \note 1/2 Important function! */
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
@@ -28,6 +30,7 @@ public:
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
    #endif
 
+    /*! \note 2/2 Important function! */
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     //==============================================================================
@@ -53,6 +56,12 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    /*! \note Declared static as it does not use any class variable */
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParamLayout();
+
+    juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters",
+         createParamLayout() };
+  
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Tutorial_EQAudioProcessor)
