@@ -62,6 +62,15 @@ public:
     juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters",
          createParamLayout() };
   
+    using Filter = juce::dsp::IIR::Filter<float>;
+    // NOTE: Processing context passed to a chain. A IIR filter is 12db per oct, need 4 if want 48
+    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+
+    // NOTE: Represent the whole monopath of our 3-band parametric EQ
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+
+    MonoChain LChain, RChain;
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Tutorial_EQAudioProcessor)

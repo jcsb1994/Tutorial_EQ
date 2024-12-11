@@ -95,6 +95,14 @@ void Tutorial_EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+
+    juce::dsp::ProcessSpec spec;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = 1;
+    spec.sampleRate = sampleRate;
+
+    LChain.prepare(spec);
+    RChain.prepare(spec);
 }
 
 void Tutorial_EQAudioProcessor::releaseResources()
@@ -150,12 +158,19 @@ void Tutorial_EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    
+    juce::dsp::AudioBlock<float> block(buffer);
 
-        // ..do something to the data...
-    }
+    // NOTE: We extract the 2 channels that were created as public members of our processor class
+    auto left_block = block.getSingleChannelBlock(0);
+    auto right_block = block.getSingleChannelBlock(1);
+
+    // NOTE: create contexts to provide wrappers around our blocks of data
+    juce::dsp::ProcessContextReplacing<float> leftContext(left_block);
+    juce::dsp::ProcessContextReplacing<float> rightContext(right_block);
+
+    LChain.process(leftContext);
+    RChain.process(rightContext);
 }
 
 //==============================================================================
