@@ -10,6 +10,16 @@
 
 #include <JuceHeader.h>
 
+// NOTE: dflt member init is from C++11 */
+struct ChainSettings {
+    float peakFreq { 0 }, peakGaindB { 0 }, peakQ {1.f};
+    float lowCutFreq {0}, hiCutFreq {0};
+    int lowCutSlope {0}, hiCutSlope {0};
+
+};
+
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
+
 //==============================================================================
 /**
 */
@@ -70,6 +80,12 @@ public:
     using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
     MonoChain LChain, RChain;
+
+    enum MonoChainIdx {
+        LowCut,
+        Peak,
+        HiCut
+    };
 
 private:
     //==============================================================================

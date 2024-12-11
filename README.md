@@ -46,3 +46,9 @@ For testing inside a DAW:
 1. Compile the project (open in VS, build) -> This will create the builds folder with .exe in it.
 2. Open the exe, path is `\Builds\VisualStudio2022\x64\Debug\App\AudioPluginHost.exe`
 3. Options -> edit list of available plugins -> add path to project(s), or VST3 folder of your project
+
+
+### Launching the plugin host when building
+Cela permet de tester le plugin avec un input de son, et de faire une chaine de plugin en particulier
+Right click sur le projet VST3 de la solution (workspace) dans Visual Studio, et  click settings -> config properties -> debugging
+changer le field command de `$(TargetPath)` pour le path vers le binaire de plugin host

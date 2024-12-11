@@ -103,6 +103,16 @@ void Tutorial_EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 
     LChain.prepare(spec);
     RChain.prepare(spec);
+
+    auto chainSettings = getChainSettings(apvts); // Will return values of the knobs/ctrls
+    float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
+
+    auto peakCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+        sampleRate, chainSettings.peakFreq, chainSettings.peakQ, gain_processed);
+
+    *LChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
+    *RChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
+    
 }
 
 void Tutorial_EQAudioProcessor::releaseResources()
@@ -159,6 +169,16 @@ void Tutorial_EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
     
+    // TODO: Refactor, next lines are repeated in prepare to play.. This updates parameter coefficients before processing the audio block
+    auto chainSettings = getChainSettings(apvts);
+    float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
+    auto peakCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+        getSampleRate(), chainSettings.peakFreq, chainSettings.peakQ, gain_processed);
+    *LChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
+    *RChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
+    
+
+
     juce::dsp::AudioBlock<float> block(buffer);
 
     // NOTE: We extract the 2 channels that were created as public members of our processor class
@@ -219,10 +239,31 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new Tutorial_EQAudioProcessor();
 }
 
+//NOTE: rappel, & fait qu'on travaille direct sur l'objet, pas de copie, ni de pointeur
+// avantages to ptrs: null safety
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
+{
+    ChainSettings settings;
+
+    // Option 1: ceci retourne une normalized value (0-1), so we dont want that
+    // apvts.getParameter("LowCut Freq")->getValue();
+    // Option 2: get raw value va donner notre range predetermined
+    settings.lowCutFreq = apvts.getRawParameterValue("LowCut Freq")->load();
+    settings.hiCutFreq = apvts.getRawParameterValue("HighCut Freq")->load();
+    settings.peakFreq = apvts.getRawParameterValue("Peak Freq")->load();
+    settings.peakGaindB = apvts.getRawParameterValue("Peak Gain")->load();
+    settings.peakQ = apvts.getRawParameterValue("Peak Quality")->load();
+    settings.lowCutSlope = apvts.getRawParameterValue("LowCut Slope")->load();
+    settings.hiCutSlope = apvts.getRawParameterValue("HighCut Slope")->load();
+
+    return settings;
+}
+
 /* static */ juce::AudioProcessorValueTreeState::ParameterLayout Tutorial_EQAudioProcessor::createParamLayout()
 {
     const float earMinFreq = 20.f;
     const float earMaxFreq = 20000.f;
+    const float skewLogFreqRange = 0.25f; // Allows having 10kHz at 90% of the knob (log scale for hi and lo freqs)
 
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
@@ -252,15 +293,15 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     // float dflt -> Set to 20 cuz we dont want to low cut by default
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "LowCut Freq", "LowCut Freq",
-        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, 1.f), earMinFreq));
+        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, skewLogFreqRange), earMinFreq));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "HighCut Freq", "HighCut Freq",
-        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, 1.f), earMaxFreq));
+        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, skewLogFreqRange), earMaxFreq));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Peak Freq", "Peak Freq",
-        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, 1.f), 750.f));
+        juce::NormalisableRange<float>(earMinFreq, earMaxFreq, 1.f, skewLogFreqRange), 750.f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Peak Gain", "Peak Gain",
