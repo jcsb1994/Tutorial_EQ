@@ -72,6 +72,8 @@ public:
     juce::AudioProcessorValueTreeState apvts { *this, nullptr, "Parameters",
          createParamLayout() };
   
+private:
+
     using Filter = juce::dsp::IIR::Filter<float>;
     // NOTE: Processing context passed to a chain. A IIR filter is 12db per oct, need 4 if want 48
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
@@ -87,7 +89,15 @@ public:
         HiCut
     };
 
-private:
+    // NOTE: Helper function to prevent redundantly updating peak filters in processblock and in preparetoplay
+    void UpdatePeakFilter(const ChainSettings& cs);
+
+    using Coefs = Filter::CoefficientsPtr; // NOTE: Alias to this cryptic type for getting coefficents of UI
+    static inline void UpdateCoefficients(Coefs &old, const Coefs &replacements) {
+        *old = *replacements;
+    }
+
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Tutorial_EQAudioProcessor)
 };

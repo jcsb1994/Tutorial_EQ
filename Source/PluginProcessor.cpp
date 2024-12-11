@@ -107,13 +107,9 @@ void Tutorial_EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     auto chainSettings = getChainSettings(apvts); // Will return values of the knobs/ctrls
     float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
 
-    // Coefficients for the peak band
-    auto peakCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-        sampleRate, chainSettings.peakFreq, chainSettings.peakQ, gain_processed);
+    // NOTE: Update the parameters in prepare to play
+    UpdatePeakFilter(chainSettings);
 
-    *LChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
-    *RChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
-    
     // Coefficients for the cut bands
     /* 
     The order of a filter determines the steepness of its cutoff slope. 
@@ -251,13 +247,13 @@ void Tutorial_EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     
     // TODO: Refactor, next lines are repeated in prepare to play.. This updates parameter coefficients before processing the audio block
     auto chainSettings = getChainSettings(apvts);
-    float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
-    auto peakCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-        getSampleRate(), chainSettings.peakFreq, chainSettings.peakQ, gain_processed);
-    *LChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
-    *RChain.get<MonoChainIdx::Peak>().coefficients = *peakCoefs;
     
-   int lowCut_order = (chainSettings.lowCutSlope + 1) * 2; // ex: choice 0 is 12dB/oct, we want an order of 2.
+    // NOTE: Update the parameters before processing
+    // Peak filter
+    UpdatePeakFilter(chainSettings);
+    
+    // Cut filters
+    int lowCut_order = (chainSettings.lowCutSlope + 1) * 2; // ex: choice 0 is 12dB/oct, we want an order of 2.
     auto cutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), lowCut_order);
 
     auto& leftLowCut = LChain.get<MonoChainIdx::LowCut>();
@@ -473,4 +469,17 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 
     return layout;
 }
-    
+
+
+// Private
+
+void Tutorial_EQAudioProcessor::UpdatePeakFilter(const ChainSettings& chainSettings)
+{
+    float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
+
+    auto newPeakCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.peakFreq, chainSettings.peakQ, gain_processed);
+
+    // NOTE: Pass directly so there is no copy in a variable
+    UpdateCoefficients(LChain.get<MonoChainIdx::Peak>().coefficients, newPeakCoefs);
+    UpdateCoefficients(RChain.get<MonoChainIdx::Peak>().coefficients, newPeakCoefs);
+}
