@@ -111,83 +111,14 @@ void Tutorial_EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     UpdatePeakFilter(chainSettings);
 
     // Coefficients for the cut bands
-    /* 
-    The order of a filter determines the steepness of its cutoff slope. 
-    The order refers to the number of "poles" in the filter, and each pole contributes 6 dB per octave to the attenuation.
-    For example:
-    A 1st-order filter has a slope of 6 dB/octave.
-    A 2nd-order filter has a slope of 12 dB/octave.
-    A 4th-order filter has a slope of 24 dB/octave, and so on.
-    The transfer function of a filter is a ratio of polynomials in terms of frequency (ss or zz in analog or digital filters, respectively).
-    The order is the highest power of ss (or zz) in the denominator of the transfer function.
-    Each additional order introduces an extra "pole" to the filter's frequency response, affecting its steepness and roll-off behavior. 
-    Each "pole" or "order" represents an energy storage element in the filter (e.g., an inductor or capacitor in an analog filter).
-    Higher-order filters can store and dissipate energy in more complex ways, resulting in steeper slopes or sharper cutoffs.*/
-    int lowCut_order = (chainSettings.lowCutSlope + 1) * 2; // ex: choice 0 is 12dB/oct, we want an order of 2.
-    auto cutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, lowCut_order);
-
+    
+    int lowCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.lowCutSlope);
+    auto cutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, lowCut_transferFuncOrder);
     auto& leftLowCut = LChain.get<MonoChainIdx::LowCut>();
-    // 4 filters chain, all bypassed, will enable depending on which setting is set by user
-    leftLowCut.setBypassed<0>(true);
-    leftLowCut.setBypassed<1>(true);
-    leftLowCut.setBypassed<2>(true);
-    leftLowCut.setBypassed<3>(true);
-
-    // less efficient than a switch, but..
-    if (chainSettings.lowCutSlope >= 0)
-    {
-        leftLowCut.get<0>().coefficients = *cutCoefs[0];
-        leftLowCut.setBypassed<0>(false);
-    }
-    if (chainSettings.lowCutSlope >= 1)
-    {
-        leftLowCut.get<1>().coefficients = *cutCoefs[1];
-        leftLowCut.setBypassed<1>(false);
-    }
-    if (chainSettings.lowCutSlope >= 2)
-    {
-        leftLowCut.get<2>().coefficients = *cutCoefs[2];
-        leftLowCut.setBypassed<2>(false);
-    }
-    if (chainSettings.lowCutSlope >= 3)
-    {
-        leftLowCut.get<3>().coefficients = *cutCoefs[3];
-        leftLowCut.setBypassed<3>(false);
-    }
-
-
-
-
     auto& rightLowCut = RChain.get<MonoChainIdx::LowCut>();
-    // 4 filters chain, all bypassed, will enable depending on which setting is set by user
-    rightLowCut.setBypassed<0>(true);
-    rightLowCut.setBypassed<1>(true);
-    rightLowCut.setBypassed<2>(true);
-    rightLowCut.setBypassed<3>(true);
 
-    // less efficient than a switch, but..
-    if (chainSettings.lowCutSlope >= 0)
-    {
-        rightLowCut.get<0>().coefficients = *cutCoefs[0];
-        rightLowCut.setBypassed<0>(false);
-    }
-    if (chainSettings.lowCutSlope >= 1)
-    {
-        rightLowCut.get<1>().coefficients = *cutCoefs[1];
-        rightLowCut.setBypassed<1>(false);
-    }
-    if (chainSettings.lowCutSlope >= 2)
-    {
-        rightLowCut.get<2>().coefficients = *cutCoefs[2];
-        rightLowCut.setBypassed<2>(false);
-    }
-    if (chainSettings.lowCutSlope >= 3)
-    {
-        rightLowCut.get<3>().coefficients = *cutCoefs[3];
-        rightLowCut.setBypassed<3>(false);
-    }
-
-
+    UpdateCutFilter(leftLowCut, cutCoefs, chainSettings.lowCutSlope);
+    UpdateCutFilter(rightLowCut, cutCoefs, chainSettings.lowCutSlope);
 
 }
 
@@ -245,82 +176,28 @@ void Tutorial_EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
     
-    // TODO: Refactor, next lines are repeated in prepare to play.. This updates parameter coefficients before processing the audio block
-    auto chainSettings = getChainSettings(apvts);
     
-    // NOTE: Update the parameters before processing
+    
+    // Update the parameters before processing
+    // ======
+
+    auto chainSettings = getChainSettings(apvts);
+
     // Peak filter
     UpdatePeakFilter(chainSettings);
     
     // Cut filters
-    int lowCut_order = (chainSettings.lowCutSlope + 1) * 2; // ex: choice 0 is 12dB/oct, we want an order of 2.
-    auto cutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), lowCut_order);
-
+    int lowCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.lowCutSlope);
+    auto cutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), lowCut_transferFuncOrder);
     auto& leftLowCut = LChain.get<MonoChainIdx::LowCut>();
-    // 4 filters chain, all bypassed, will enable depending on which setting is set by user
-    leftLowCut.setBypassed<0>(true);
-    leftLowCut.setBypassed<1>(true);
-    leftLowCut.setBypassed<2>(true);
-    leftLowCut.setBypassed<3>(true);
-
-    // less efficient than a switch, but..
-    if (chainSettings.lowCutSlope >= 0)
-    {
-        leftLowCut.get<0>().coefficients = *cutCoefs[0];
-        leftLowCut.setBypassed<0>(false);
-    }
-    if (chainSettings.lowCutSlope >= 1)
-    {
-        leftLowCut.get<1>().coefficients = *cutCoefs[1];
-        leftLowCut.setBypassed<1>(false);
-    }
-    if (chainSettings.lowCutSlope >= 2)
-    {
-        leftLowCut.get<2>().coefficients = *cutCoefs[2];
-        leftLowCut.setBypassed<2>(false);
-    }
-    if (chainSettings.lowCutSlope >= 3)
-    {
-        leftLowCut.get<3>().coefficients = *cutCoefs[3];
-        leftLowCut.setBypassed<3>(false);
-    }
-
-
-
-
     auto& rightLowCut = RChain.get<MonoChainIdx::LowCut>();
-    // 4 filters chain, all bypassed, will enable depending on which setting is set by user
-    rightLowCut.setBypassed<0>(true);
-    rightLowCut.setBypassed<1>(true);
-    rightLowCut.setBypassed<2>(true);
-    rightLowCut.setBypassed<3>(true);
 
-    // less efficient than a switch, but..
-    if (chainSettings.lowCutSlope >= 0)
-    {
-        rightLowCut.get<0>().coefficients = *cutCoefs[0];
-        rightLowCut.setBypassed<0>(false);
-    }
-    if (chainSettings.lowCutSlope >= 1)
-    {
-        rightLowCut.get<1>().coefficients = *cutCoefs[1];
-        rightLowCut.setBypassed<1>(false);
-    }
-    if (chainSettings.lowCutSlope >= 2)
-    {
-        rightLowCut.get<2>().coefficients = *cutCoefs[2];
-        rightLowCut.setBypassed<2>(false);
-    }
-    if (chainSettings.lowCutSlope >= 3)
-    {
-        rightLowCut.get<3>().coefficients = *cutCoefs[3];
-        rightLowCut.setBypassed<3>(false);
-    }
+    UpdateCutFilter(leftLowCut, cutCoefs, chainSettings.lowCutSlope);
+    UpdateCutFilter(rightLowCut, cutCoefs, chainSettings.lowCutSlope);
 
 
-
-
-
+    // Block processing
+    // ======
 
     juce::dsp::AudioBlock<float> block(buffer);
 

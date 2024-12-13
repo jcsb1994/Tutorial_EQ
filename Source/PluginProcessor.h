@@ -83,11 +83,16 @@ private:
 
     MonoChain LChain, RChain;
 
+    /*! \brief Used to access index of A MonoChain processor chain */
     enum MonoChainIdx {
         LowCut,
         Peak,
         HiCut
     };
+
+    
+    // Peak filter
+    // =====================================
 
     // NOTE: Helper function to prevent redundantly updating peak filters in processblock and in preparetoplay
     void UpdatePeakFilter(const ChainSettings& cs);
@@ -95,6 +100,72 @@ private:
     using Coefs = Filter::CoefficientsPtr; // NOTE: Alias to this cryptic type for getting coefficents of UI
     static inline void UpdateCoefficients(Coefs &old, const Coefs &replacements) {
         *old = *replacements;
+    }
+
+    // Cut filters
+    // =====================================    
+
+    static inline int GetCutFilterTransferOrder(int slopeChoiceIdx) {
+        /* 
+        The order of a filter determines the steepness of its cutoff slope. 
+        The order refers to the number of "poles" in the filter, and each pole contributes 6 dB per octave to the attenuation.
+        For example:
+        A 1st-order filter has a slope of 6 dB/octave.
+        A 2nd-order filter has a slope of 12 dB/octave.
+        A 4th-order filter has a slope of 24 dB/octave, and so on.
+        The transfer function of a filter is a ratio of polynomials in terms of frequency (ss or zz in analog or digital filters, respectively).
+        The order is the highest power of ss (or zz) in the denominator of the transfer function.
+        Each additional order introduces an extra "pole" to the filter's frequency response, affecting its steepness and roll-off behavior. 
+        Each "pole" or "order" represents an energy storage element in the filter (e.g., an inductor or capacitor in an analog filter).
+        Higher-order filters can store and dissipate energy in more complex ways, resulting in steeper slopes or sharper cutoffs. */
+        
+        return (slopeChoiceIdx + 1) * 2;
+    }
+
+    template<typename ChainT, typename CoefT>
+    /*! \brief Using a templated fct because I don't know what types are returned for the left low cut param,
+        returned from LChain.get<MonoChainIdx::LowCut>();
+        TODO: find the proper return type */
+    void UpdateCutFilter(ChainT& lowCut, const CoefT& cutCoefs, const int slopeChoiceIdx)
+    {
+        // 4 filters chain, all bypassed, will enable depending on which setting is set by user
+        /* NOTE: setBypassed<0> is a dependent name, means: depends on a template parameter
+
+        lowCut is of type ChainT, which is a template type. The compiler cannot know
+        whether setBypassed<0> is a normal member, a static member, or a member template function of ChainT.
+
+        So if we had kept rightLowCut.setBypassed<0>(true); ---> <0> could have been seen as less than by compiler,
+        i.e error: expected primary-expression before '<' token
+        so, use .template when:
+            You are calling a member template function of a dependent type.
+            The compiler needs clarification that you are using a template function and not something else.
+         */
+        lowCut.template setBypassed<0>(true);
+        lowCut.template setBypassed<1>(true);
+        lowCut.template setBypassed<2>(true);
+        lowCut.template setBypassed<3>(true);
+
+        // less efficient than a switch, but..
+        if (slopeChoiceIdx >= 0)
+        {
+            lowCut.template get<0>().coefficients = *cutCoefs[0];
+            lowCut.template setBypassed<0>(false);
+        }
+        if (slopeChoiceIdx >= 1)
+        {
+            lowCut.template get<1>().coefficients = *cutCoefs[1];
+            lowCut.template setBypassed<1>(false);
+        }
+        if (slopeChoiceIdx >= 2)
+        {
+            lowCut.template get<2>().coefficients = *cutCoefs[2];
+            lowCut.template setBypassed<2>(false);
+        }
+        if (slopeChoiceIdx >= 3)
+        {
+            lowCut.template get<3>().coefficients = *cutCoefs[3];
+            lowCut.template setBypassed<3>(false);
+        }
     }
 
 
