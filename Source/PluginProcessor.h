@@ -145,29 +145,31 @@ private:
         lowCut.template setBypassed<2>(true);
         lowCut.template setBypassed<3>(true);
 
-        // less efficient than a switch, but..
-        if (slopeChoiceIdx >= 0)
-        {
-            lowCut.template get<0>().coefficients = *cutCoefs[0];
-            lowCut.template setBypassed<0>(false);
-        }
-        if (slopeChoiceIdx >= 1)
-        {
-            lowCut.template get<1>().coefficients = *cutCoefs[1];
-            lowCut.template setBypassed<1>(false);
-        }
-        if (slopeChoiceIdx >= 2)
-        {
-            lowCut.template get<2>().coefficients = *cutCoefs[2];
-            lowCut.template setBypassed<2>(false);
-        }
-        if (slopeChoiceIdx >= 3)
-        {
+        switch (slopeChoiceIdx) {
+        case 3:
+        // NOTE: could use UpdateCoefficients here
             lowCut.template get<3>().coefficients = *cutCoefs[3];
             lowCut.template setBypassed<3>(false);
+            break;
+        case 2:
+            lowCut.template get<2>().coefficients = *cutCoefs[2];
+            lowCut.template setBypassed<2>(false);
+            break;
+        case 1:
+            lowCut.template get<1>().coefficients = *cutCoefs[1];
+            lowCut.template setBypassed<1>(false);
+            break;
+        case 0:
+            lowCut.template get<0>().coefficients = *cutCoefs[0];
+            lowCut.template setBypassed<0>(false);
+            break;
+
+        default:
+            break;
         }
     }
 
+    void UpdateCutFilters(const ChainSettings& chainSettings);
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Tutorial_EQAudioProcessor)

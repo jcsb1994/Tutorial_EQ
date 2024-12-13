@@ -105,20 +105,8 @@ void Tutorial_EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     RChain.prepare(spec);
 
     auto chainSettings = getChainSettings(apvts); // Will return values of the knobs/ctrls
-    float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
-
-    // NOTE: Update the parameters in prepare to play
     UpdatePeakFilter(chainSettings);
-
-    // Coefficients for the cut bands
-    
-    int lowCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.lowCutSlope);
-    auto cutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, lowCut_transferFuncOrder);
-    auto& leftLowCut = LChain.get<MonoChainIdx::LowCut>();
-    auto& rightLowCut = RChain.get<MonoChainIdx::LowCut>();
-
-    UpdateCutFilter(leftLowCut, cutCoefs, chainSettings.lowCutSlope);
-    UpdateCutFilter(rightLowCut, cutCoefs, chainSettings.lowCutSlope);
+    UpdateCutFilters(chainSettings);
 
 }
 
@@ -182,19 +170,8 @@ void Tutorial_EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // ======
 
     auto chainSettings = getChainSettings(apvts);
-
-    // Peak filter
     UpdatePeakFilter(chainSettings);
-    
-    // Cut filters
-    int lowCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.lowCutSlope);
-    auto cutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), lowCut_transferFuncOrder);
-    auto& leftLowCut = LChain.get<MonoChainIdx::LowCut>();
-    auto& rightLowCut = RChain.get<MonoChainIdx::LowCut>();
-
-    UpdateCutFilter(leftLowCut, cutCoefs, chainSettings.lowCutSlope);
-    UpdateCutFilter(rightLowCut, cutCoefs, chainSettings.lowCutSlope);
-
+    UpdateCutFilters(chainSettings);
 
     // Block processing
     // ======
@@ -359,4 +336,29 @@ void Tutorial_EQAudioProcessor::UpdatePeakFilter(const ChainSettings& chainSetti
     // NOTE: Pass directly so there is no copy in a variable
     UpdateCoefficients(LChain.get<MonoChainIdx::Peak>().coefficients, newPeakCoefs);
     UpdateCoefficients(RChain.get<MonoChainIdx::Peak>().coefficients, newPeakCoefs);
+}
+
+void Tutorial_EQAudioProcessor::UpdateCutFilters(const ChainSettings& chainSettings)
+{
+    
+    // Cut filters
+    int lowCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.lowCutSlope);
+    auto newlowCutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), lowCut_transferFuncOrder);
+    auto& leftLowCut = LChain.get<MonoChainIdx::LowCut>();
+    auto& rightLowCut = RChain.get<MonoChainIdx::LowCut>();
+
+    UpdateCutFilter(leftLowCut, newlowCutCoefs, chainSettings.lowCutSlope);
+    UpdateCutFilter(rightLowCut, newlowCutCoefs, chainSettings.lowCutSlope);
+
+
+    // High cut
+    int hiCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.hiCutSlope);
+    auto newhiCutCoefs = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.hiCutFreq, getSampleRate(), hiCut_transferFuncOrder);
+    auto& lefthiCut = LChain.get<MonoChainIdx::HiCut>();
+    auto& righthiCut = RChain.get<MonoChainIdx::HiCut>();
+
+    // The filter algo returns coeficients, we pass them to the chain to be applied on audio signal
+    UpdateCutFilter(lefthiCut, newhiCutCoefs, chainSettings.hiCutSlope);
+    UpdateCutFilter(righthiCut, newhiCutCoefs, chainSettings.hiCutSlope);
+
 }
