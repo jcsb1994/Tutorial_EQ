@@ -171,6 +171,13 @@ private:
 
     void UpdateCutFilters(const ChainSettings& chainSettings);
 
+
+    inline void UpdateFilters() {        
+        auto chainSettings = getChainSettings(apvts); // Will return values of the knobs/ctrls
+        UpdatePeakFilter(chainSettings);
+        UpdateCutFilters(chainSettings);
+    }
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Tutorial_EQAudioProcessor)
 };

@@ -104,10 +104,7 @@ void Tutorial_EQAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     LChain.prepare(spec);
     RChain.prepare(spec);
 
-    auto chainSettings = getChainSettings(apvts); // Will return values of the knobs/ctrls
-    UpdatePeakFilter(chainSettings);
-    UpdateCutFilters(chainSettings);
-
+    UpdateFilters();
 }
 
 void Tutorial_EQAudioProcessor::releaseResources()
@@ -168,11 +165,8 @@ void Tutorial_EQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     
     // Update the parameters before processing
     // ======
-
-    auto chainSettings = getChainSettings(apvts);
-    UpdatePeakFilter(chainSettings);
-    UpdateCutFilters(chainSettings);
-
+    UpdateFilters();
+    
     // Block processing
     // ======
 
@@ -221,12 +215,23 @@ void Tutorial_EQAudioProcessor::getStateInformation (juce::MemoryBlock& destData
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
+
+    // NOTE: this is all thats needed to save the plugin state!
+    bool append = true;
+    juce::MemoryOutputStream mos(destData, append);
+    apvts.state.writeToStream(mos);
 }
 
 void Tutorial_EQAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+
+    auto newTree = juce::ValueTree::readFromData(data, sizeInBytes);
+    if (newTree.isValid()) {
+        apvts.replaceState(newTree);
+        UpdateFilters();
+    }
 }
 
 //==============================================================================
