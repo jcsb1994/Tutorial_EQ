@@ -192,7 +192,7 @@ bool Tutorial_EQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* Tutorial_EQAudioProcessor::createEditor()
 {
-    // return new Tutorial_EQAudioProcessorEditor (*this);
+    return new Tutorial_EQAudioProcessorEditor (*this);
 
 
     /* Line below for showing parameters at start of project!
@@ -206,7 +206,8 @@ juce::AudioProcessorEditor* Tutorial_EQAudioProcessor::createEditor()
     generic editor provided by JUCE that automatically handles the creation of GUI components
     for audio processor parameters. This class can display all the parameters you define
     in your createParamLayout() function, without needing to manually set up custom controls. */
-    return new juce::GenericAudioProcessorEditor(*this);
+
+    // return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
