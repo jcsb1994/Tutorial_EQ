@@ -20,6 +20,22 @@ struct ChainSettings {
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
 
+
+using Filter = juce::dsp::IIR::Filter<float>;
+// NOTE: Processing context passed to a chain. A IIR filter is 12db per oct, need 4 if want 48
+using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+
+/*! \brief Used to access index of A MonoChain type (processor chain) */
+enum MonoChainIdx {
+    LowCut,
+    Peak,
+    HiCut
+};
+/*! \brief Represent the whole monopath of our 3-band parametric EQ
+    \note is global so it can be instantiated by pluginEditor */
+using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+
+
 //==============================================================================
 /**
 */
@@ -74,21 +90,8 @@ public:
   
 private:
 
-    using Filter = juce::dsp::IIR::Filter<float>;
-    // NOTE: Processing context passed to a chain. A IIR filter is 12db per oct, need 4 if want 48
-    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
-
-    // NOTE: Represent the whole monopath of our 3-band parametric EQ
-    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
-
     MonoChain LChain, RChain;
 
-    /*! \brief Used to access index of A MonoChain processor chain */
-    enum MonoChainIdx {
-        LowCut,
-        Peak,
-        HiCut
-    };
 
     
     // Peak filter
