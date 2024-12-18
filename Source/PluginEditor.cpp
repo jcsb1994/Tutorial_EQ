@@ -40,12 +40,72 @@ Tutorial_EQAudioProcessorEditor::~Tutorial_EQAudioProcessorEditor()
 //==============================================================================
 void Tutorial_EQAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+/* This is for demonstration purposes. Very inefficient, calculates the magnitude (Y pos) for each pixel (X pos)
+wide in the graph, so you run through the X axis and stop at every pixel to calculate where the line is drawn there
 
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::FontOptions (15.0f));
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+Ideas to optimize: 
+    1. reduce draw points (more than 1 pixel)
+    2. Use timer to draw less frequently (dont draw in main gui thread)
+    3. store the mags and dont draw points if didnt change, or better: only trigger redrawing as a whole when a param changed */
+    using namespace juce;
+    g.fillAll(Colours::black);
+    auto bounds = getLocalBounds();
+    auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
+    
+    auto graphWidth = responseArea.getWidth(); // width of the EQ graph in pixels
+
+    auto& lowCut = monochain.get<MonoChainIdx::LowCut>();
+    auto& peak = monochain.get<MonoChainIdx::Peak>();
+    auto& hiCut = monochain.get<MonoChainIdx::HiCut>();
+
+    //  (e.g., 44100 Hz, 48000 Hz). This is needed to calculate the filter's magnitude response at specific frequencies.
+    auto srate = audioProcessor.getSampleRate();
+
+    std::vector<double> mags;
+    mags.resize(graphWidth);
+
+    for (size_t i = 0; i < graphWidth; i++) {
+        double mag = 1.f;
+        auto freq = mapToLog10(double(i) / double(graphWidth), 20.0, 20000.0);
+
+        if (!monochain.isBypassed<MonoChainIdx::Peak>()) {
+            mag *= peak.coefficients->getMagnitudeForFrequency(freq, srate);
+        }
+        if (!lowCut.isBypassed<0>()) mag *= lowCut.get<0>().coefficients->getMagnitudeForFrequency(freq, srate);
+        if (!lowCut.isBypassed<1>()) mag *= lowCut.get<1>().coefficients->getMagnitudeForFrequency(freq, srate);
+        if (!lowCut.isBypassed<2>()) mag *= lowCut.get<2>().coefficients->getMagnitudeForFrequency(freq, srate);
+        if (!lowCut.isBypassed<3>()) mag *= lowCut.get<3>().coefficients->getMagnitudeForFrequency(freq, srate);
+        
+        if (!hiCut.isBypassed<0>()) mag *= hiCut.get<0>().coefficients->getMagnitudeForFrequency(freq, srate);
+        if (!hiCut.isBypassed<1>()) mag *= hiCut.get<1>().coefficients->getMagnitudeForFrequency(freq, srate);
+        if (!hiCut.isBypassed<2>()) mag *= hiCut.get<2>().coefficients->getMagnitudeForFrequency(freq, srate);
+        if (!hiCut.isBypassed<3>()) mag *= hiCut.get<3>().coefficients->getMagnitudeForFrequency(freq, srate);
+
+        mags[i] = Decibels::gainToDecibels(mag);
+    }
+
+    Path respCurve;
+
+    const double outMin = responseArea.getBottom();
+    const double outMax = responseArea.getY();
+
+    auto map = [outMin, outMax](double input)
+    {
+        // -24 to 24 is the range of the Peak band gain
+        return jmap(input, -24.0, 24.0, outMin, outMax);
+    };
+
+    respCurve.startNewSubPath(responseArea.getX(), map(mags.front()));
+
+    for (size_t i = 0; i < mags.size(); i++) {
+        respCurve.lineTo(responseArea.getX() + i, map(mags[i]));
+    }
+    
+    g.setColour(Colours::orange);
+    g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.f);
+
+    g.setColour(Colours::white);
+    g.strokePath(respCurve, PathStrokeType(2.f));
 }
 
 void Tutorial_EQAudioProcessorEditor::resized()
