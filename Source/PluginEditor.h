@@ -33,6 +33,8 @@ public:
     Tutorial_EQAudioProcessorEditor (Tutorial_EQAudioProcessor&);
     ~Tutorial_EQAudioProcessorEditor() override;
 
+    void toggleParameterListeners(bool enableListeners);
+
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;

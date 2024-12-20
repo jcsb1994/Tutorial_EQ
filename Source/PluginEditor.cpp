@@ -12,6 +12,7 @@
 #define WINDOW_WIDTH 600
 #define WINDOW_HEIGHT 400
 
+
 //==============================================================================
 Tutorial_EQAudioProcessorEditor::Tutorial_EQAudioProcessorEditor (Tutorial_EQAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p),
@@ -30,11 +31,29 @@ Tutorial_EQAudioProcessorEditor::Tutorial_EQAudioProcessorEditor (Tutorial_EQAud
         addAndMakeVisible(comp); 
     }
 
+    toggleParameterListeners(true);
+
+    startTimer(60); // knows this fct because it inherits from the juce::Timer class
+
     setSize (WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
 Tutorial_EQAudioProcessorEditor::~Tutorial_EQAudioProcessorEditor()
 {
+    toggleParameterListeners(false);
+
+}
+
+// constructor helper
+void Tutorial_EQAudioProcessorEditor::toggleParameterListeners(bool enableListeners) {
+    const auto& params = audioProcessor.getParameters(); // Returns an array of pointers
+    for (auto param : params) {
+        if (enableListeners) {
+            param->addListener(this); // Adding the pluginEditor instance as a listener for each param
+        } else {
+            param->removeListener(this);
+        }
+    }
 }
 
 //==============================================================================
@@ -150,12 +169,20 @@ void Tutorial_EQAudioProcessorEditor::parameterValueChanged (int parameterIndex,
 
 void Tutorial_EQAudioProcessorEditor::parameterGestureChanged (int parameterIndex, bool gestureIsStarting)
 {
-    // if(is_params_changed.compareAndSetValue(false, true)) {
-
-    // }
 }
 
 void Tutorial_EQAudioProcessorEditor::timerCallback()
 {
+    // addListener() must be called for this to work, i.e. we need to listen to our parameters
+    // to know if they have changed
 
+    // Update the editor's monochain
+    if(is_params_changed.get() == true) {
+        is_params_changed.set(false);
+        auto cs = getChainSettings(audioProcessor.apvts);
+        auto pkcoefs = MakePeakFilter(cs, audioProcessor.getSampleRate());
+        UpdateCoefficients(monochain.get<MonoChainIdx::Peak>().coefficients, pkcoefs);
+    }
+
+    repaint();
 }
