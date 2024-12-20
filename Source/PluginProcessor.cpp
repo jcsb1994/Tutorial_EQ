@@ -358,8 +358,8 @@ void Tutorial_EQAudioProcessor::UpdateCutFilters(const ChainSettings& chainSetti
 {
     
     // Cut filters
-    int lowCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.lowCutSlope);
-    auto newlowCutCoefs = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), lowCut_transferFuncOrder);
+    // Low cut    
+    auto newlowCutCoefs = MakeLowCutFilter(chainSettings, getSampleRate());
     auto& leftLowCut = LChain.get<MonoChainIdx::LowCut>();
     auto& rightLowCut = RChain.get<MonoChainIdx::LowCut>();
 
@@ -368,8 +368,7 @@ void Tutorial_EQAudioProcessor::UpdateCutFilters(const ChainSettings& chainSetti
 
 
     // High cut
-    int hiCut_transferFuncOrder = GetCutFilterTransferOrder(chainSettings.hiCutSlope);
-    auto newhiCutCoefs = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.hiCutFreq, getSampleRate(), hiCut_transferFuncOrder);
+    auto newhiCutCoefs = MakeHighCutFilter(chainSettings, getSampleRate());
     auto& lefthiCut = LChain.get<MonoChainIdx::HiCut>();
     auto& righthiCut = RChain.get<MonoChainIdx::HiCut>();
 
