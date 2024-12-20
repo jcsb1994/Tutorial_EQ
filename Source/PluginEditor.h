@@ -23,7 +23,11 @@ struct CustomRotSlider : juce::Slider
 //==============================================================================
 /**
 */
-class Tutorial_EQAudioProcessorEditor  : public juce::AudioProcessorEditor
+class Tutorial_EQAudioProcessorEditor  : public juce::AudioProcessorEditor,
+    
+    /*! \note Inheriting from the Listener class allows subscribing to parameters */
+    juce::AudioProcessorParameter::Listener, // Inherit from more than one classes!
+    juce::Timer
 {
 public:
     Tutorial_EQAudioProcessorEditor (Tutorial_EQAudioProcessor&);
@@ -33,11 +37,21 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    // AudioProcessorParameter::Listener OVERRIDE FCTs
+    void parameterValueChanged (int parameterIndex, float newValue) override;
+    void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override;
+
+    // Timer OVERRIDEs
+    void timerCallback() override;
+
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     Tutorial_EQAudioProcessor& audioProcessor;
 
+    /*! \note The brace initialization is from C++11. It helps prevent implicit conversions (safer)
+        it is prefered in modern cpp code. */
+    juce::Atomic<bool> is_params_changed { false };
 
     /*! \brief Instances of our struct that inherits from some type of specific slider */
     CustomRotSlider peakFreqSlider, peakGainSlider, peakQSlider;

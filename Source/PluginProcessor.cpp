@@ -9,6 +9,18 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+
+// Free functions
+
+Coefs MakePeakFilter(const ChainSettings chainSettings, double sampleRate)
+{
+    float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+        sampleRate, chainSettings.peakFreq, chainSettings.peakQ, gain_processed);
+}
+
+
+// Class functions
 //==============================================================================
 Tutorial_EQAudioProcessor::Tutorial_EQAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -335,9 +347,7 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 
 void Tutorial_EQAudioProcessor::UpdatePeakFilter(const ChainSettings& chainSettings)
 {
-    float gain_processed = juce::Decibels::decibelsToGain(chainSettings.peakGaindB); // as gain units, not as decibels
-
-    auto newPeakCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.peakFreq, chainSettings.peakQ, gain_processed);
+    auto newPeakCoefs = MakePeakFilter(chainSettings, getSampleRate());
 
     // NOTE: Pass directly so there is no copy in a variable
     UpdateCoefficients(LChain.get<MonoChainIdx::Peak>().coefficients, newPeakCoefs);

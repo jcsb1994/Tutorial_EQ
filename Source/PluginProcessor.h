@@ -36,6 +36,14 @@ enum MonoChainIdx {
 using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
 
+using Coefs = Filter::CoefficientsPtr; // NOTE: Alias to this cryptic type for getting coefficents of UI
+inline void UpdateCoefficients(Coefs &old, const Coefs &replacements) {
+    *old = *replacements;
+}
+
+Coefs MakePeakFilter(const ChainSettings cs, double sampleRate);
+
+
 //==============================================================================
 /**
 */
@@ -100,10 +108,6 @@ private:
     // NOTE: Helper function to prevent redundantly updating peak filters in processblock and in preparetoplay
     void UpdatePeakFilter(const ChainSettings& cs);
 
-    using Coefs = Filter::CoefficientsPtr; // NOTE: Alias to this cryptic type for getting coefficents of UI
-    static inline void UpdateCoefficients(Coefs &old, const Coefs &replacements) {
-        *old = *replacements;
-    }
 
     // Cut filters
     // =====================================    

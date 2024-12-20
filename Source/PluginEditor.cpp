@@ -142,3 +142,20 @@ std::vector<juce::Component*> Tutorial_EQAudioProcessorEditor::getComps()
     return { &peakFreqSlider, &peakGainSlider, &peakQSlider,
         &lowCutSlider, &hiCutSlider, &lowCutSlopeSlider, &hiCutSlopeSlider };
 }
+
+void Tutorial_EQAudioProcessorEditor::parameterValueChanged (int parameterIndex, float newValue)
+{
+    is_params_changed.set(true);
+}
+
+void Tutorial_EQAudioProcessorEditor::parameterGestureChanged (int parameterIndex, bool gestureIsStarting)
+{
+    // if(is_params_changed.compareAndSetValue(false, true)) {
+
+    // }
+}
+
+void Tutorial_EQAudioProcessorEditor::timerCallback()
+{
+
+}
