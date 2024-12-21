@@ -182,6 +182,14 @@ void Tutorial_EQAudioProcessorEditor::timerCallback()
         auto cs = getChainSettings(audioProcessor.apvts);
         auto pkcoefs = MakePeakFilter(cs, audioProcessor.getSampleRate());
         UpdateCoefficients(monochain.get<MonoChainIdx::Peak>().coefficients, pkcoefs);
+
+        auto lccoefs = MakeLowCutFilter(cs, audioProcessor.getSampleRate());
+        auto hccoefs = MakeHighCutFilter(cs, audioProcessor.getSampleRate());
+
+        UpdateCutFilter(monochain.get<MonoChainIdx::LowCut>(), lccoefs, cs.lowCutSlope);
+        UpdateCutFilter(monochain.get<MonoChainIdx::HiCut>(), hccoefs, cs.hiCutSlope);
+
+        repaint();
     }
 
     repaint();
