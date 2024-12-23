@@ -15,8 +15,10 @@
 
 //==============================================================================
 Tutorial_EQAudioProcessorEditor::Tutorial_EQAudioProcessorEditor (Tutorial_EQAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p),
+    : AudioProcessorEditor (&p), 
+    audioProcessor (p),
     // TODO: do enum to iterate
+    respCurveComponent(audioProcessor),
     lowCutSliderAttach(audioProcessor.apvts, "LowCut Freq", lowCutSlider),
     hiCutSliderAttach(audioProcessor.apvts, "HighCut Freq", hiCutSlider),
     peakFreqSliderAttach(audioProcessor.apvts, "Peak Freq", peakFreqSlider),
@@ -31,33 +33,22 @@ Tutorial_EQAudioProcessorEditor::Tutorial_EQAudioProcessorEditor (Tutorial_EQAud
         addAndMakeVisible(comp); 
     }
 
-    toggleParameterListeners(true);
-
-    startTimer(60); // knows this fct because it inherits from the juce::Timer class
-
     setSize (WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
 Tutorial_EQAudioProcessorEditor::~Tutorial_EQAudioProcessorEditor()
 {
-    toggleParameterListeners(false);
-
 }
 
-// constructor helper
-void Tutorial_EQAudioProcessorEditor::toggleParameterListeners(bool enableListeners) {
-    const auto& params = audioProcessor.getParameters(); // Returns an array of pointers
-    for (auto param : params) {
-        if (enableListeners) {
-            param->addListener(this); // Adding the pluginEditor instance as a listener for each param
-        } else {
-            param->removeListener(this);
-        }
-    }
-}
 
 //==============================================================================
 void Tutorial_EQAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    using namespace juce;
+    g.fillAll(Colours::black);
+}
+
+void RespCurveCmp::paint (juce::Graphics& g)
 {
 /* This is for demonstration purposes. Very inefficient, calculates the magnitude (Y pos) for each pixel (X pos)
 wide in the graph, so you run through the X axis and stop at every pixel to calculate where the line is drawn there
@@ -68,10 +59,8 @@ Ideas to optimize:
     3. store the mags and dont draw points if didnt change, or better: only trigger redrawing as a whole when a param changed */
     using namespace juce;
     g.fillAll(Colours::black);
-    auto bounds = getLocalBounds();
-    auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
-    
-    auto graphWidth = responseArea.getWidth(); // width of the EQ graph in pixels
+    auto bounds = getLocalBounds(); // Were already configured in editor.resised
+    auto graphWidth = bounds.getWidth(); // width of the EQ graph in pixels
 
     auto& lowCut = monochain.get<MonoChainIdx::LowCut>();
     auto& peak = monochain.get<MonoChainIdx::Peak>();
@@ -105,8 +94,8 @@ Ideas to optimize:
 
     Path respCurve;
 
-    const double outMin = responseArea.getBottom();
-    const double outMax = responseArea.getY();
+    const double outMin = bounds.getBottom();
+    const double outMax = bounds.getY();
 
     auto map = [outMin, outMax](double input)
     {
@@ -114,14 +103,14 @@ Ideas to optimize:
         return jmap(input, -24.0, 24.0, outMin, outMax);
     };
 
-    respCurve.startNewSubPath(responseArea.getX(), map(mags.front()));
+    respCurve.startNewSubPath(bounds.getX(), map(mags.front()));
 
     for (size_t i = 0; i < mags.size(); i++) {
-        respCurve.lineTo(responseArea.getX() + i, map(mags[i]));
+        respCurve.lineTo(bounds.getX() + i, map(mags[i]));
     }
     
     g.setColour(Colours::orange);
-    g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.f);
+    g.drawRoundedRectangle(bounds.toFloat(), 4.f, 1.f);
 
     g.setColour(Colours::white);
     g.strokePath(respCurve, PathStrokeType(2.f));
@@ -136,6 +125,7 @@ void Tutorial_EQAudioProcessorEditor::resized()
     
     // Y axis cut : leave the third for the FFT 
     auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
+    respCurveComponent.setBounds(responseArea); // NOTE: setbounds is inherited from the component class
 
     // X axis cuts : Left part for high pass, right is low pass
     auto lowCutArea = bounds.removeFromLeft(bounds.getWidth() * 0.33);
@@ -159,19 +149,12 @@ void Tutorial_EQAudioProcessorEditor::resized()
 std::vector<juce::Component*> Tutorial_EQAudioProcessorEditor::getComps()
 {
     return { &peakFreqSlider, &peakGainSlider, &peakQSlider,
-        &lowCutSlider, &hiCutSlider, &lowCutSlopeSlider, &hiCutSlopeSlider };
+        &lowCutSlider, &hiCutSlider, &lowCutSlopeSlider, &hiCutSlopeSlider,
+        & respCurveComponent };
 }
 
-void Tutorial_EQAudioProcessorEditor::parameterValueChanged (int parameterIndex, float newValue)
-{
-    is_params_changed.set(true);
-}
 
-void Tutorial_EQAudioProcessorEditor::parameterGestureChanged (int parameterIndex, bool gestureIsStarting)
-{
-}
-
-void Tutorial_EQAudioProcessorEditor::timerCallback()
+void RespCurveCmp::timerCallback()
 {
     // addListener() must be called for this to work, i.e. we need to listen to our parameters
     // to know if they have changed
@@ -192,5 +175,14 @@ void Tutorial_EQAudioProcessorEditor::timerCallback()
         repaint();
     }
 
-    repaint();
+    // repaint();
+}
+
+void RespCurveCmp::parameterValueChanged (int parameterIndex, float newValue)
+{
+    is_params_changed.set(true);
+}
+
+void RespCurveCmp::parameterGestureChanged (int parameterIndex, bool gestureIsStarting)
+{
 }
