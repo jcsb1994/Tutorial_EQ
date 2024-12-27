@@ -73,6 +73,14 @@ void CustomRotSlider::paint(juce::Graphics& g)
 
     auto bounds = getSliderBounds();
 
+    // DEBUG: draw red lines around the slider
+    g.setColour(Colours::red);
+    g.drawRect(getLocalBounds()); // Bounds of the whole component (slider + surrounding area)
+    g.setColour(Colours::yellow);
+    g.drawRect(bounds); // Bounds of the slider only (as per our getSliderBounds() fct)
+
+    //===========
+
     // Call our custom LnF draw function
     getLookAndFeel().drawRotarySlider(
         g,                                                                      // Graphics instance 
@@ -82,10 +90,24 @@ void CustomRotSlider::paint(juce::Graphics& g)
         *this);                                                                 // slider instance
 }
 
-
 juce::Rectangle<int> CustomRotSlider::getSliderBounds() const
 {
-    return getLocalBounds();
+    // return getLocalBounds();
+    /* getLocalBounds() gives the full region we defined somewhere? We want the slider bounds to be
+        smaller than this otherwise the knobs will bump eachother */
+
+    auto bounds = getLocalBounds();
+
+    auto size = juce::jmin(bounds.getWidth(), bounds.getHeight());
+    size -= getTextHeight() * 2;
+    
+    // Draw a square rectangle that contains the knob
+    juce::Rectangle<int> r;
+    r.setSize(size, size);
+    r.setCentre(bounds.getCentreX(), 0); // rectangle centered with the slider X
+    r.setY(2); // Absolute within the component's bounds. So 2 pixels below top of the component
+
+    return r;
 }
 
 
