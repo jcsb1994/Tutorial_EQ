@@ -13,6 +13,87 @@
 #define WINDOW_HEIGHT 400
 
 
+
+
+void MyLookAndFeel::drawRotarySlider (juce::Graphics& g,
+                            int x, int y, int width, int height,
+                            float sliderPosProportional,
+                            float rotaryStartAngle,
+                            float rotaryEndAngle,
+                            juce::Slider&)
+{
+    using namespace juce;
+
+    auto bounds = Rectangle<float>(x, y, width, height);
+
+    g.setColour(Colour(97, 18, 170));
+    g.fillEllipse(bounds);
+
+    g.setColour(Colour(255, 150, 1));
+    g.drawEllipse(bounds, 1); // Draws a circle of thick 1
+
+
+    Path p;
+
+    auto center = bounds.getCentre();
+    Rectangle<float> r;
+    r.setLeft(center.getX() - 2);
+    r.setRight(center.getX() + 2);
+    r.setTop(bounds.getY());
+    r.setBottom(center.getY());
+
+    p.addRectangle(r);
+
+    jassert(rotaryEndAngle > rotaryStartAngle); // NOTE: jassert is from juce, run time assert only for debug builds
+    // from normalized to angle in Rads (wonder why passing as normalized angle then..)
+    auto sliderAngle = jmap(sliderPosProportional, 0.f, 1.f, rotaryStartAngle, rotaryEndAngle); 
+    p.applyTransform(AffineTransform().rotated(sliderAngle, center.getX(), center.getY()));
+
+    g.fillPath(p); // NOTE: this is what draws the arrow inside the knobs
+}
+
+
+
+
+
+
+
+
+
+
+
+void CustomRotSlider::paint(juce::Graphics& g)
+{
+    using namespace juce;
+
+    auto startAngle = degreesToRadians(180 + 45);
+    auto endAngle = degreesToRadians(180 - 45) + MathConstants<float>::twoPi; // Add 2pi to calc jmap
+
+    auto range = getRange(); // Get the slider's normalized range
+
+    auto bounds = getSliderBounds();
+
+    // Call our custom LnF draw function
+    getLookAndFeel().drawRotarySlider(
+        g,                                                                      // Graphics instance 
+        bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),    // XYWH positioning of the slider
+        jmap(getValue(), range.getStart(), range.getEnd(), 0.0, 1.0),           // Current pos normalized (set to 0-1)
+        startAngle, endAngle,                                                   // Allowed angle range
+        *this);                                                                 // slider instance
+}
+
+
+juce::Rectangle<int> CustomRotSlider::getSliderBounds() const
+{
+    return getLocalBounds();
+}
+
+
+
+
+
+
+
 //==============================================================================
 Tutorial_EQAudioProcessorEditor::Tutorial_EQAudioProcessorEditor (Tutorial_EQAudioProcessor& p)
     : AudioProcessorEditor (&p),

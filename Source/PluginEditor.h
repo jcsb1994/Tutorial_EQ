@@ -18,10 +18,10 @@ struct MyLookAndFeel : juce::LookAndFeel_V4 // Inherit from the most recent LnF 
                             float sliderPosProportional,
                             float rotaryStartAngle,
                             float rotaryEndAngle,
-                            juce::Slider&) override { // Dflt impl for now
-                            }
+                            juce::Slider&) override;
 
 };
+
 
 struct CustomRotSlider : juce::Slider
 {
@@ -38,7 +38,7 @@ struct CustomRotSlider : juce::Slider
         setLookAndFeel(nullptr);
     }
 
-    void paint(juce::Graphics& g) override {}
+    void paint(juce::Graphics& g) override;
     /*! \note const function garanties not to modify the class instance */
     juce::Rectangle<int> getSliderBounds() const;
     int getTextHeight() const { return 14; }
