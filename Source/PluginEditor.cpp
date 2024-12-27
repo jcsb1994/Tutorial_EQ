@@ -15,10 +15,19 @@
 
 //==============================================================================
 Tutorial_EQAudioProcessorEditor::Tutorial_EQAudioProcessorEditor (Tutorial_EQAudioProcessor& p)
-    : AudioProcessorEditor (&p), 
+    : AudioProcessorEditor (&p),
+    // Call constructors for the custom sliders
+    peakFreqSlider(*audioProcessor.apvts.getParameter("LowCut Freq"), "Hz"),
+    peakGainSlider(*audioProcessor.apvts.getParameter("HighCut Freq"), "Hz"),
+    peakQSlider(*audioProcessor.apvts.getParameter("Peak Freq"), "Hz"),
+    lowCutSlider(*audioProcessor.apvts.getParameter("Peak Gain"), "dB"),
+    hiCutSlider(*audioProcessor.apvts.getParameter("Peak Quality"), ""),
+    lowCutSlopeSlider(*audioProcessor.apvts.getParameter("LowCut Slope"), "dB/Oct"),
+    hiCutSlopeSlider(*audioProcessor.apvts.getParameter("HighCut Slope"), "dB/Oct"),
+
     audioProcessor (p),
-    // TODO: do enum to iterate
     respCurveComponent(audioProcessor),
+    // TODO: do enum to iterate
     lowCutSliderAttach(audioProcessor.apvts, "LowCut Freq", lowCutSlider),
     hiCutSliderAttach(audioProcessor.apvts, "HighCut Freq", hiCutSlider),
     peakFreqSliderAttach(audioProcessor.apvts, "Peak Freq", peakFreqSlider),

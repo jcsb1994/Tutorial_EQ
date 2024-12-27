@@ -11,13 +11,43 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
+struct MyLookAndFeel : juce::LookAndFeel_V4 // Inherit from the most recent LnF version
+{
+    void drawRotarySlider (juce::Graphics&,
+                            int x, int y, int width, int height,
+                            float sliderPosProportional,
+                            float rotaryStartAngle,
+                            float rotaryEndAngle,
+                            juce::Slider&) override { // Dflt impl for now
+                            }
+
+};
+
 struct CustomRotSlider : juce::Slider
 {
-    CustomRotSlider() : juce::Slider(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
-                          juce::Slider::TextEntryBoxPosition::NoTextBox)
+    CustomRotSlider(juce::RangedAudioParameter& param, juce::String suffix)
+    : juce::Slider(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
+                          juce::Slider::TextEntryBoxPosition::NoTextBox),
+    _param(&param), _suffix(suffix)
     {
-
+        setLookAndFeel(&_lnf);
     }
+
+    ~CustomRotSlider()
+    {
+        setLookAndFeel(nullptr);
+    }
+
+    void paint(juce::Graphics& g) override {}
+    /*! \note const function garanties not to modify the class instance */
+    juce::Rectangle<int> getSliderBounds() const;
+    int getTextHeight() const { return 14; }
+    juce::String getDisplayStr() const;
+private:
+    MyLookAndFeel _lnf;
+    juce::RangedAudioParameter* _param; // Base class for many derived (float, choice, bool, ...)
+    juce::String _suffix;
+
 };
 
 struct RespCurveCmp:
